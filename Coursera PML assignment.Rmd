@@ -1,0 +1,60 @@
+---
+title: "Coursera Practical Machine Learning Assignment"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importing data & libraries
+
+```{r import}
+training <- read.csv("pml-training.csv", header=T)
+testing <- read.csv("pml-testing.csv", header=T)
+library(caret)
+library(rpart)
+library(rattle)
+library(randomForest)
+```
+
+## Cleaning data
+
+Remove all columns that contains NA and remove features that are not in the testing dataset, i.e. not relevant to the accelerometer measurements. We will also remove the first 7 features since they are not related to the model.
+```{r cleaning}
+features <- names(testing[,colSums(is.na(testing)) == 0])[8:59]
+training <- training[,c(features,"classe")]
+testing <- testing[,c(features,"problem_id")]
+```
+
+## Partitioning data 
+We will split 60% of our data into training and 40% into testing.
+```{r partition}
+inTrain <- createDataPartition(training$classe, p=0.6, list=F)
+train <- training[inTrain,]
+test <- training[-inTrain,]
+```
+
+## Predicting with Decision Tree 
+Predicting with decision tree yields only 49% accuracy.
+```{r DT}
+modDT <- train(classe~., method="rpart", data=train)
+predDT <- predict(modDT, test)
+confusionMatrix(test$classe, predDT)
+fancyRpartPlot(modDT$finalModel)
+```
+
+## Predicting with Random Forests
+Predicting with random forests is much better, with 99% accuracy.
+```{r RF}
+modRF <- train(classe ~ ., method="rf", data=train, ntree=10)
+predRF <- predict(modRF, test)
+confusionMatrix(test$classe, predRF)
+```
+
+## Predicting on the test dataset (with Random Forests)
+```{r predict}
+predict(modRF, testing)
+```
+
+
